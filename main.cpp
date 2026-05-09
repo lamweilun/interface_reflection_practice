@@ -12,10 +12,26 @@ constexpr R make_interface(Args&&... args)
     ret.value = T(std::forward<Args>(args)...);
 
     constexpr auto ctx = std::meta::access_context::current();
+
+    // Iterate through all R's members
     template for (constexpr auto ret_member : std::define_static_array(nonstatic_data_members_of(^^R, ctx)))
     {
+        // Skips if its "value"
+        if constexpr (ret_member == ^^R::value)
+        {
+            continue;
+        }
+
+        // Iterate through all T's members
         template for (constexpr auto t_member : std::define_static_array(members_of(^^T, ctx)))
         {
+            // Skip if its not a function
+            if constexpr (!is_function(t_member))
+            {
+                continue;
+            }
+
+            // If the name matches, bind the functions together
             if constexpr (has_identifier(ret_member) && has_identifier(t_member) && identifier_of(ret_member) == identifier_of(t_member))
             {
                 ret.[:ret_member:] = std::bind(&[:t_member:], std::any_cast<T const&>(ret.value));
