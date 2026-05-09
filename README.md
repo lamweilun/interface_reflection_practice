@@ -8,6 +8,51 @@ This project demonstrates a technique for creating type-erased interfaces in C++
 - CMake 3.15+ (optional, for building)
 - Standard library support for `<any>`, `<functional>`, `<print>`, `<vector>`, `<numbers>`, and `<meta>`
 
+## Example
+```C++
+// Define a Circle type
+class Circle {
+public:
+    explicit Circle(float radius) : _radius{radius} {}
+    float area() const { return 3.14159f * _radius * _radius; }
+private:
+    float _radius = 0.0f;
+};
+
+// Define a Rect type
+class Rect {
+public:
+    explicit Rect(float length, float width) : _length{length}, _width{width} {}
+    float area() const { return _length * _width; }
+private:
+    float _length, _width = 0.0f;
+};
+
+// Define your Shape interface
+struct Shape;
+consteval {
+    std::vector<std::meta::info> shape_members =
+    {
+        std::meta::data_member_spec(^^std::any, {.name = "value"}),
+        std::meta::data_member_spec(^^std::function<float()>, {.name = "area"}),
+    };
+    std::meta::define_aggregate(^^Shape, shape_members);
+}
+
+// make_interface implementation detail... (Look into main.cpp for the source code)
+
+int main() {
+    // Now you can associate Circle and Rect by their "area" member function
+    std::vector<Shape> shapes;
+    shapes.push_back(make_interface<Shape, Circle>(1.0f));
+    shapes.push_back(make_interface<Shape, Rect>(1.0f, 2.0f));
+    for (auto const& shape : shapes) { std::println("{}", shape.area()); }
+    // Sample output:
+    // 3.1415927
+    // 2
+}
+```
+
 ## How It Works
 
 The core idea is to use C++26's reflection capabilities to:
@@ -41,3 +86,6 @@ shapes.push_back(std::make_unique<Circle>(1.0f));
 - All interface binding resolved at compile time
 - Value semantics (objects stored directly in vector, no heap allocation for small types)
 - Works with any type that has the required members, regardless of their hierarchy
+
+## NOTE
+- This project serves as a practice for code generation via reflection, the implementation is currently incomplete. For eg. Does not work with non-const member functions.
